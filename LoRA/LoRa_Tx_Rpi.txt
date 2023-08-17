@@ -1,0 +1,84 @@
+/*
+  This is a modified code example showing the Heltec.LoRa sending data(RobotID,temperature and humidity).
+  The DHT11 module measure local temperature and humidity.
+   
+  Original code by Aaron.Lee from HelTec AutoMation, ChengDu, China
+  https://heltec.org
+*/
+
+// DHT sensor library
+#include <DHT.h>
+ 
+// Pin to connect DHT sensor
+#define DHTPIN 23
+
+// Define the kind of sensor, it can be DHT22 instead of DHT11
+#define DHTTYPE DHT11
+ 
+// Initialize the DHT sensor
+DHT dht(DHTPIN, DHTTYPE);
+ 
+#include "heltec.h"
+
+#define BAND    915E6  //bands. e.g. 868E6,915E6
+
+String packSize = "--";
+String packet ;
+String Chaindata="";
+char Temp22[5]=""; // Temperature in string format
+char Hum22[5]="";  // Humidity in string format
+
+void setup()
+{
+   //WIFI Kit series V1 not support Vext control
+   //DisplayEnable, Heltec.Heltec.Heltec.LoRa,Serial,PABOOST,long BAND
+  Heltec.begin(false, true , true , true , BAND );
+  dht.begin();
+}
+
+void loop()
+{
+  // Read relative humidity
+  float h = dht.readHumidity();
+  // Read temperature in celcius degree (by default)
+  float t = dht.readTemperature();
+  // Read temperature in Fahreheit degree
+  float f = dht.readTemperature(true);
+ 
+  // Verify if error during the reading process
+  if (isnan(h) || isnan(t) || isnan(f)) {
+    Serial.println("Error reading sensor measurements");
+    digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delay(100);                       // wait for 100 ms
+    digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
+    delay(100);                       // wait for 100 ms
+  }
+
+  int Temp2=t*100;  // Converting fractional digits to integer
+  int Hum2=h*100;
+  
+  sprintf(Temp22,"%04d", Temp2); // Converting numbers to 4 digits format
+  sprintf(Hum22,"%04d", Hum2);
+  
+  Chaindata="1000"+String(Temp22)+String(Hum22); //Join the whole string, 4 digits for Robot ID, 4 digits for temperature and 4 digits for humidity
+  
+  // send packet
+  LoRa.beginPacket();
+  
+/*
+ * LoRa.setTxPower(txPower,RFOUT_pin);
+ * txPower -- 0 ~ 20
+ * RFOUT_pin could be RF_PACONFIG_PASELECT_PABOOST or RF_PACONFIG_PASELECT_RFO
+ *   - RF_PACONFIG_PASELECT_PABOOST -- LoRa single output via PABOOST, maximum output 20dBm
+ *   - RF_PACONFIG_PASELECT_RFO     -- LoRa single output via RFO_HF / RFO_LF, maximum output 14dBm
+*/
+  LoRa.setTxPower(14,RF_PACONFIG_PASELECT_PABOOST);
+  LoRa.println(Chaindata);// Send message via LoRa
+  LoRa.endPacket();
+  Serial.print("Robot");
+  Serial.println(Chaindata);
+  digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(2000);                       // wait for 2 seconds
+  digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
+  delay(2000);                       // wait for 2 seconds
+}

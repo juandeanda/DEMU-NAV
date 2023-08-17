@@ -1,0 +1,34 @@
+/*
+  This is a modified code example showing the Heltec.LoRa reciving data wirelessly.
+  Original code by Aaron.Lee from HelTec AutoMation, ChengDu, China
+  www.heltec.cn
+*/
+#include "heltec.h" 
+
+#define BAND    915E6  // band. e.g. 868E6,915E6
+String packSize = "--";
+String packet ;
+
+void LoRaData(){
+  Serial.print(packet); // Send via serial port the recived data
+}
+
+void cbk(int packetSize) {
+  packet ="";
+  packSize = String(packetSize,DEC);
+  for (int i = 0; i < packetSize; i++) { packet += (char) LoRa.read(); }
+  LoRaData();
+}
+
+void setup() { 
+  //WIFI Kit series V1 not support Vext control
+  // DisplayEnable, Heltec.Heltec.Heltec.LoRa Disable,Serial Enable,PABOOST Enable,long BAND
+  Heltec.begin(false , true, true , true , BAND);
+  LoRa.receive();
+}
+
+void loop() {
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) { cbk(packetSize);  }
+  delay(10);
+}
